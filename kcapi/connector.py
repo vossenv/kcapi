@@ -35,7 +35,8 @@ class KCConnector:
                 orders.update(self.get_orders_delta(start_date, start_date + timedelta(weeks=1), pair))
             start_date += timedelta(weeks=1)
             self.logger.info("Total items: {}".format(len(orders)))
-        return orders
+
+        return {k: v for k, v in sorted(orders.items(), key=lambda x: x[1]['createdAt'], reverse=True)}
 
     def get_orders_delta(self, start, end, pair=None) -> dict:
 
@@ -62,7 +63,7 @@ class KCConnector:
             self.logger.info('Getting orders from {} - {}'.format(start.date(), end.date()))
             for o in result['items']:
                 oid = "{}-{}-{}".format(o['tradeId'], o['orderId'], o['counterOrderId'])
-                o['createdAt'] = datetime.fromtimestamp(int(o['createdAt'])/1000.0).strftime('%Y-%m-%d %H:%M:%S.%f')
+                o['createdAt'] = datetime.fromtimestamp(int(o['createdAt'])/1000.0)
                 o['uoid'] = oid
                 orders[oid] = o
             self.logger.info("Fetched page {}/{}".format(result['currentPage'], result['totalPage']))
