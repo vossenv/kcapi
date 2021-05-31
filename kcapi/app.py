@@ -1,16 +1,12 @@
+import os.path
 import sys
-from datetime import datetime
 
-import pytz as pytz
 import yaml
 
 from kcapi.connector import KCConnector
-from kcapi.util import init_logger
+from kcapi.data_processor import DataProcessor
+from kcapi.util import init_logger, to_date, date_to_str, utcnowloc
 
-
-def to_date(datestring):
-    if datestring:
-        return pytz.timezone("UTC").localize(datetime.strptime(datestring, '%m/%d/%Y'))
 try:
     cfg = sys.argv[1]
 except:
@@ -19,11 +15,22 @@ except:
 with open(cfg) as f:
     conf = yaml.safe_load(f)
 
-logger = init_logger(conf['log_level'])
+logger = init_logger(conf.get('log_level'))
 conn = KCConnector(**conf)
 
-orders = conn.get_orders(to_date(conf['start_date']), to_date(conf['end_date']))
+start = to_date(conf['start_date'])
+end = to_date(conf.get('end_date')) if conf.get('end_date') else utcnowloc()
+
+orders = conn.get_orders(start, end)
+d = DataProcessor(orders)
+
+root = os.path.dirname(cfg)
+folder = os.path.join(root, "output_{}_to_{}".format(date_to_str(start), date_to_str(end)))
+
+d.to_csv_pairs(d.sort_by_pair(), folder=folder)
+
+
+
+
 
 print()
-
-

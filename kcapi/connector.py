@@ -1,7 +1,9 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from kucoin.client import Trade
+
+from kcapi.util import utcnowloc
 
 
 class KCConnector:
@@ -16,27 +18,28 @@ class KCConnector:
     def connect(self):
         return Trade(self.api_key, self.api_secret, self.api_passphrase)
 
-    def get_orders(self, start_date, end_date=None) -> dict:
+    def get_orders(self, start_date, end_date) -> dict:
+
+        if start_date > utcnowloc() or end_date > utcnowloc():
+            raise AssertionError("Dates cannot be in the future")
+        if start_date > end_date:
+            raise AssertionError("Start date must be BEFORE end date")
+        # elif (start_date >)
 
         orders = {}
-        end_date = datetime.utcnow() if not end_date else end_date + timedelta(days=1)
-
+        end_date = end_date + timedelta(days=1)
         while True:
             if end_date - start_date < timedelta(weeks=1):
                 orders.update(self.get_orders_delta(start_date, end_date))
                 break
             else:
-                orders.update(self.get_orders_delta(start_date))
+                orders.update(self.get_orders_delta(start_date, start_date + timedelta(weeks=1)))
             start_date += timedelta(weeks=1)
-
         return orders
 
-    def format_date(self, date_obj):
-        return date_obj.strftime('%m/%d/%Y')
+    def get_orders_delta(self, start, end) -> dict:
 
-    def get_orders_delta(self, start, end=None) -> dict:
-
-        if end and (start - end) > timedelta(weeks=1):
+        if start - end > timedelta(weeks=1):
             raise AssertionError("Order delta must be no longer than 1 week")
 
         orders = {}
@@ -44,21 +47,22 @@ class KCConnector:
             'tradeType': "TRADE",
             'pageSize': 500,
             'startAt': int(start.timestamp() * 1000),
+            'endAt': int(end.timestamp() * 1000),
             'currentPage': 1
         }
 
-        if end:
-            kwargs['endAt'] = int(end.timestamp() * 1000)
-
-        self.logger.info('Getting orders from {} - {}'.format(self.format_date(start), self.format_date(end or start + timedelta(weeks=1))))
-
         while True:
             result = self.client.get_fill_list(**kwargs)
+            if not result['items']:
+                self.logger.info("No orders from {} - {}".format(start.date(), end.date()))
+                break
+            self.logger.info('Getting orders from {} - {}'.format(start.date(), end.date()))
             for o in result['items']:
                 oid = "{}-{}-{}".format(o['tradeId'], o['orderId'], o['counterOrderId'])
+                o['uoid'] = oid
                 orders[oid] = o
+            self.logger.info("Fetched page {}/{}".format(result['currentPage'], result['totalPage']))
             if kwargs['currentPage'] == result['totalPage']:
                 break
-            self.logger.info("Fetched page {}/{}".format(result['currentPage'], result['totalPage']))
             kwargs['currentPage'] += 1
         return orders
