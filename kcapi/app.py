@@ -21,7 +21,7 @@ conn = KCConnector(**conf)
 start = to_date(conf['start_date'])
 end = to_date(conf.get('end_date')) if conf.get('end_date') else utcnowloc()
 
-orders = conn.get_orders(start, end)
+orders = conn.get_orders(start, end, conf.get('pair'))
 d = DataProcessor(orders)
 
 root = os.path.dirname(cfg)

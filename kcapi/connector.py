@@ -1,5 +1,5 @@
 import logging
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from kucoin.client import Trade
 
@@ -18,7 +18,7 @@ class KCConnector:
     def connect(self):
         return Trade(self.api_key, self.api_secret, self.api_passphrase)
 
-    def get_orders(self, start_date, end_date) -> dict:
+    def get_orders(self, start_date, end_date, pair=None) -> dict:
 
         if start_date > utcnowloc() or end_date > utcnowloc():
             raise AssertionError("Dates cannot be in the future")
@@ -29,15 +29,15 @@ class KCConnector:
         end_date = end_date + timedelta(days=1)
         while True:
             if end_date - start_date < timedelta(weeks=1):
-                orders.update(self.get_orders_delta(start_date, end_date))
+                orders.update(self.get_orders_delta(start_date, end_date, pair))
                 break
             else:
-                orders.update(self.get_orders_delta(start_date, start_date + timedelta(weeks=1)))
+                orders.update(self.get_orders_delta(start_date, start_date + timedelta(weeks=1), pair))
             start_date += timedelta(weeks=1)
             self.logger.info("Total items: {}".format(len(orders)))
         return orders
 
-    def get_orders_delta(self, start, end) -> dict:
+    def get_orders_delta(self, start, end, pair=None) -> dict:
 
         if start - end > timedelta(weeks=1):
             raise AssertionError("Order delta must be no longer than 1 week")
@@ -51,6 +51,9 @@ class KCConnector:
             'currentPage': 1
         }
 
+        if pair:
+            kwargs['symbol'] = pair
+
         while True:
             result = self.client.get_fill_list(**kwargs)
             if not result['items']:
@@ -59,6 +62,7 @@ class KCConnector:
             self.logger.info('Getting orders from {} - {}'.format(start.date(), end.date()))
             for o in result['items']:
                 oid = "{}-{}-{}".format(o['tradeId'], o['orderId'], o['counterOrderId'])
+                o['createdAt'] = datetime.fromtimestamp(int(o['createdAt'])/1000.0).strftime('%Y-%m-%d %H:%M:%S.%f')
                 o['uoid'] = oid
                 orders[oid] = o
             self.logger.info("Fetched page {}/{}".format(result['currentPage'], result['totalPage']))
