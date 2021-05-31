@@ -32,7 +32,8 @@ setup(name='kcapi',
           'schema',
           'requests',
           'python-dateutil',
-          'kucoin-python'
+          'kucoin-python',
+          'pytz'
       ],
       extras_require={
           'setup': setup_deps,
