@@ -28,9 +28,3 @@ root = os.path.dirname(cfg)
 folder = os.path.join(root, "output_{}_to_{}".format(date_to_str(start), date_to_str(end)))
 
 d.to_csv_pairs(d.sort_by_pair(), folder=folder)
-
-
-
-
-
-print()

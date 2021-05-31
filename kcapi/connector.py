@@ -24,7 +24,6 @@ class KCConnector:
             raise AssertionError("Dates cannot be in the future")
         if start_date > end_date:
             raise AssertionError("Start date must be BEFORE end date")
-        # elif (start_date >)
 
         orders = {}
         end_date = end_date + timedelta(days=1)
@@ -35,6 +34,7 @@ class KCConnector:
             else:
                 orders.update(self.get_orders_delta(start_date, start_date + timedelta(weeks=1)))
             start_date += timedelta(weeks=1)
+            self.logger.info("Total items: {}".format(len(orders)))
         return orders
 
     def get_orders_delta(self, start, end) -> dict:
