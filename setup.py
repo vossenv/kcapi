@@ -33,7 +33,11 @@ setup(name='kcapi',
           'requests',
           'python-dateutil',
           'kucoin-python',
-          'pytz'
+          'pytz',
+          'matplotlib',
+          'numpy',
+          'click',
+          'click-default-group',
       ],
       extras_require={
           'setup': setup_deps,
